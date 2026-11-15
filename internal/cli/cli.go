@@ -102,9 +102,15 @@ func Run(ctx context.Context, io *iostreams.IOStreams, args ...string) int {
 	// shutdown background tasks, giving up to 5s for them to finish
 	task.FromContext(ctx).ShutdownWithTimeout(5 * time.Second)
 
+	var exitCodeErr *flyerr.ExitCodeError
+
 	switch {
 	case err == nil:
 		return 0
+	case errors.As(err, &exitCodeErr):
+		// The command relayed another process's exit status and has
+		// already written its own output.
+		return exitCodeErr.Code
 	case errors.Is(err, context.Canceled), errors.Is(err, terminal.InterruptErr):
 		return 127
 	case errors.Is(err, context.DeadlineExceeded):
